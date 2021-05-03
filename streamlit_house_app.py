@@ -8,7 +8,6 @@ Tools to find the value over time of various investments, mainly to compare with
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 
 def values_of_series_of_invest(invest_amounts,
