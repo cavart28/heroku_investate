@@ -1,13 +1,7 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-
-"""
-Tools to find the value over time of various investments, mainly to compare with real estate investment
-"""
-
-import numpy as np
-import pandas as pd
+import matplotlib.pyplot as plt
 
 
 def values_of_series_of_invest(invest_amounts,
@@ -19,7 +13,6 @@ def values_of_series_of_invest(invest_amounts,
     by the percentage in rate_between_values from one investment to the next.
     By default invest_at_begining_of_period is set to False meaning that each investment is made
     at the begining of the period and thus is not subject to the period growth.
-
 
     :param: invest_values, an iterable of invested values
     :param: rate_between_values, an iterable of rate of growth for the periods from one
@@ -69,6 +62,7 @@ def values_of_series_of_invest(invest_amounts,
     else:
         return value_over_time
 
+
 def total_of_regular_investment(reg_invest_value, rate, n_periods):
     """
     A special case of total_of_series_of_invest, when the investements are constant and the rate
@@ -91,6 +85,7 @@ def total_of_regular_investment(reg_invest_value, rate, n_periods):
     else:
         factor = 1 + rate
         return reg_invest_value + reg_invest_value * (factor - factor ** n_periods) / (1 - factor)
+
 
 def compute_mortg_principal(loan_rate=0.04,
                             loan_amount=1000,
@@ -115,11 +110,11 @@ def compute_mortg_principal(loan_rate=0.04,
         period_rate_factor = 1 + loan_rate / n_payment_per_year
         n_periods = years_to_maturity * n_payment_per_year
 
-        # if we don't pay anything off, the loan amount increases following this function
+        # if we don't pay anything off, the loan amount increases after each month, following this function
         total_loan = loan_amount * period_rate_factor ** n_periods
 
-        # if we place a 1 unit every month at the same rate as the loan rate, this is what we get:
-        invest_value_factor = (period_rate_factor ** n_periods - 1) / (period_rate_factor - 1)
+        # if we place a 1 unit at the END of every month at the same rate as the loan rate, this is what we get:
+        invest_value_factor = total_of_regular_investment(1, period_rate_factor - 1, n_periods)
 
         # when the loan is paid off, P * invest_value_factor = total_loan so this is the monthly payment:
         return total_loan / invest_value_factor
@@ -205,7 +200,7 @@ def house_investment(mortg_rate=0.0275,
     """
     Compute two series, one returning the amount of equity and the second the monthly income
     (positive or negative) from renting the house. The income can then be used in the function
-    values_of_series_of_invest to emulate its investement in the stock market for example
+    values_of_series_of_invest to emulate its investment in the stock market for example
     """
 
     n_months_repay = mortgage_n_years * 12
@@ -285,7 +280,11 @@ def compare_house_invest_vs_stock(equity,
 
     # total house investment. Note that negative income are counted negatively, which
     # is ok since one could assume that the money spent would have been invested in stock otherwise
-    house_invest = [i[0] + i[1] for i in zip(equity, values_of_series_of_invest(monthly_income,
+
+    positive_monthly_income = [inc * int(inc > 0) for inc in monthly_income]
+    negative_monthly_income = [-inc * int(inc <= 0) for inc in monthly_income]
+
+    house_invest = [i[0] + i[1] for i in zip(equity, values_of_series_of_invest(positive_monthly_income,
                                                                                 [stock_market_month_rate] * len(
                                                                                     monthly_income),
                                                                                 final_only=False,
@@ -293,42 +292,41 @@ def compare_house_invest_vs_stock(equity,
     # the same initial investment in stock would yield
     down_payment_invest = [down_payment_perc * house_cost * (1 + stock_market_month_rate) ** i for i in
                            range(len(monthly_income))]
+    invested_negative_monthly_income = values_of_series_of_invest(negative_monthly_income,
+                                                                  [stock_market_month_rate] * len(
+                                                                      negative_monthly_income),
+                                                                  final_only=False,
+                                                                  invest_at_begining_of_period=False)
+    total_stock_market_invest = [i + j for (i, j) in zip(down_payment_invest, invested_negative_monthly_income)]
 
     if plot:
         plt.plot(house_invest, label='house')
-        plt.plot(down_payment_invest, label='stock')
-        plt.legend()
-        plt.show()
+    plt.plot(down_payment_invest, label='stock')
+    plt.legend()
+    plt.show()
 
-    return house_invest, down_payment_invest
-
-
-
+    return house_invest, total_stock_market_invest
 
 
 st.title('House vs other investment')
 
-cols = st.beta_columns(3)
+house_cost = st.sidebar.number_input('House price', value=240000)
+down_payment_perc = st.sidebar.number_input('Down payment percentage', value=10) * 0.01
+mortg_rate = st.sidebar.number_input('Mortgage rate', value=2.75) * 0.01
+mortgage_n_years = st.sidebar.number_input('Mortgage duration in years', value=15)
+n_years_after_pay_off = st.sidebar.number_input('Years to display after pay off', value=5)
 
-house_cost = cols[0].number_input('House price', value=240000)
-down_payment_perc = cols[0].number_input('Down payment percentage', value=10) * 0.01
-mortg_rate = cols[0].number_input('Mortgage rate', value=2.75) * 0.01
-mortgage_n_years = int(cols[0].number_input('Mortgage duration in years', value=15))
-n_years_after_pay_off = cols[0].number_input('Years to display after pay off', value=5)
+tax = st.sidebar.number_input('Yearly tax', value=4000)
+insurance = st.sidebar.number_input('Yearly insurance cost', value=3000)
+repair = st.sidebar.number_input('Yearly repair cost', value=6000)
+monthly_rental_income = st.sidebar.number_input('Average monthly rental income', value=7500)
+percentage_rented = st.sidebar.number_input('Percentage rented', value=0.5)
 
-tax = cols[1].number_input('Yearly tax', value=4000)
-insurance = cols[1].number_input('Yearly insurance cost', value=3000)
-repair = cols[1].number_input('Yearly repair cost', value=6000)
-monthly_rental_income = cols[1].number_input('Average monthly rental income', value=7500)
-percentage_rented = cols[1].number_input('Percentage rented', value=0.5)
-
-
-estate_rate = cols[2].number_input('Yearly real estate market increase', value=3.5) * 0.01
-inflation_rate = cols[2].number_input('Inflation rate', value=2.1) * 0.01
-income_tax = cols[2].number_input('Income tax percentage', value=33) * 0.01
-management_fees_rate = cols[2].number_input('Management fees', value=22) * 0.01
-stock_market_rate = cols[2].number_input('Yearly rate of other investment', value=8) * 0.01
-
+estate_rate = st.sidebar.number_input('Yearly real estate market increase', value=3.5) * 0.01
+inflation_rate = st.sidebar.number_input('Inflation rate', value=2.1) * 0.01
+income_tax = st.sidebar.number_input('Income tax percentage', value=33) * 0.01
+management_fees_rate = st.sidebar.number_input('Management fees', value=22) * 0.01
+stock_market_rate = st.sidebar.number_input('Yearly rate of other investment', value=8) * 0.01
 
 equity, monthly_income = house_investment(mortg_rate,
                                           down_payment_perc,
@@ -348,8 +346,7 @@ equity, monthly_income = house_investment(mortg_rate,
 
 df = pd.DataFrame()
 df['equity'] = equity
-df['monthy_income'] = monthly_income
-
+df['montlhy_income'] = monthly_income
 
 house_invest, down_payment_invest = compare_house_invest_vs_stock(equity,
                                                                   monthly_income,
@@ -357,8 +354,9 @@ house_invest, down_payment_invest = compare_house_invest_vs_stock(equity,
                                                                   down_payment_perc=down_payment_perc,
                                                                   house_cost=house_cost,
                                                                   plot=False)
-df['house_invest'] = house_invest
-df['down_payment_invest'] = down_payment_invest
+df['house_investment'] = house_invest
+df['stock_investment'] = down_payment_invest
 
-st.line_chart(df['monthy_income'])
-st.line_chart(df[['equity', 'house_invest', 'down_payment_invest']])
+st.line_chart(df['montlhy_income'])
+st.line_chart(df['equity'])
+st.line_chart(df[['house_investment', 'stock_investment']])
