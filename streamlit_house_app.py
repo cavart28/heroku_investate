@@ -1,5 +1,4 @@
 import streamlit as st
-import numpy as np
 import pandas as pd
 
 
@@ -245,27 +244,6 @@ def house_investment(mortg_rate=0.0275,
     # the equity is the difference between the house value and the remaining loan
     equity = [i[0] - i[1] for i in zip(house_value, loan_remaining)]
 
-    if plot:
-        plt.plot(equity, label='equity')
-        plt.vlines(x=n_months_repay, ymin=np.min(equity), ymax=np.max(equity), label='mortgage paid off',
-                   linestyles='dashed', linewidth=0.5)
-        plt.xlabel('months')
-        plt.ylabel('total')
-        plt.legend()
-        plt.title(f'Equity over {mortgage_n_years + n_years_after_pay_off} years')
-        plt.show()
-        plt.plot(monthly_income, label='monthly income')
-        plt.vlines(x=n_months_repay, ymin=np.min(monthly_income + [monthly_mort_payment]),
-                   ymax=np.max(monthly_income + [monthly_mort_payment]), label='mortgage paid off', linestyles='dashed',
-                   linewidth=0.5)
-        plt.hlines(y=monthly_mort_payment, xmin=0, xmax=n_total_months, label='monthly mortgage payment',
-                   linestyles='dashed', linewidth=0.5, color='r')
-        plt.xlabel('months')
-        plt.ylabel('monthly income')
-        plt.legend()
-        plt.title(f'Monthly income over {mortgage_n_years + n_years_after_pay_off} years')
-        plt.show()
-
     return equity, monthly_income
 
 
@@ -297,12 +275,6 @@ def compare_house_invest_vs_stock(equity,
                                                                   final_only=False,
                                                                   invest_at_begining_of_period=False)
     total_stock_market_invest = [i + j for (i, j) in zip(down_payment_invest, invested_negative_monthly_income)]
-
-    if plot:
-        plt.plot(house_invest, label='house')
-    plt.plot(down_payment_invest, label='stock')
-    plt.legend()
-    plt.show()
 
     return house_invest, total_stock_market_invest
 
